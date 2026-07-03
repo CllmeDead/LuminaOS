@@ -6,13 +6,6 @@ import Spinner from "../components/ui/Spinner"
 import MorningBriefing from "../components/ai/MorningBriefing"
 import WeeklyReport from "../components/ai/WeeklyReport"
 
-function getGreeting() {
-  const hour = new Date().getHours()
-  if (hour < 12) return "Good Morning"
-  if (hour < 17) return "Good Afternoon"
-  return "Good Evening"
-}
-
 function TopBar() {
   return (
     <header className="h-16 flex items-center justify-between
@@ -458,7 +451,7 @@ function RightPanel({ tasks, entries, loading }) {
           </p>
           <div className="h-px bg-outline-variant w-full" />
           <button
-            onClick={() => navigate("/journal")}
+            onClick={() => navigate("/app/journal")}
             className="w-full py-2 bg-surface-container border
                        border-outline-variant text-xs font-bold
                        rounded-lg flex items-center justify-center
@@ -570,7 +563,7 @@ export default function Dashboard() {
             energy={5}
           />
 
-          <FocusHero onClick={() => navigate("/pomodoro")} />
+          <FocusHero onClick={() => navigate("/app/pomodoro")} />
 
           <DailyIntentions
             tasks={tasks}

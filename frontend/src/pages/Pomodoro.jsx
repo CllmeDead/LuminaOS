@@ -27,14 +27,16 @@ export default function Pomodoro() {
   const [thoughts, setThoughts] = useState("")
   const [tasks, setTasks]       = useState([])
   const [sessions, setSessions] = useState([])
+  const [insight, setInsight]   = useState(null)
   const intervalRef             = useRef(null)
   const sessionIdRef            = useRef(null)
 
   useEffect(() => {
-    Promise.all([api.getTasks(), api.getSessions()])
-      .then(([t, s]) => {
+    Promise.all([api.getTasks(), api.getSessions(), api.getAIInsight()])
+      .then(([t, s, ai]) => {
         setTasks(t.filter(task => task.status !== "done").slice(0, 3))
         setSessions(s.slice(0, 3))
+        setInsight(ai?.content || null)
       })
       .catch(err => console.error("Pomodoro fetch error:", err))
   }, [])
@@ -82,6 +84,7 @@ export default function Pomodoro() {
           started_at: new Date().toISOString(),
         })
         sessionIdRef.current = session.id
+        setSessions(prev => [session, ...prev].slice(0, 3))
       } catch (err) {
         console.error("Start session failed:", err)
       }
@@ -92,10 +95,11 @@ export default function Pomodoro() {
   const handleComplete = async () => {
     if (sessionIdRef.current) {
       try {
-        await api.updateSession(sessionIdRef.current, {
+        const updated = await api.updateSession(sessionIdRef.current, {
           completed: true,
           ended_at: new Date().toISOString(),
         })
+        setSessions(prev => prev.map(s => s.id === updated.id ? updated : s))
       } catch (err) {
         console.error("Complete session failed:", err)
       }
@@ -317,23 +321,40 @@ export default function Pomodoro() {
           </h3>
           <div className="glass-card p-4 rounded-xl">
             <div className="flex items-end justify-between h-24 gap-1">
-              {[40, 60, 85, 100, 70, 45, 75].map((h, i) => (
-                <div
-                  key={i}
-                  className={`w-full rounded-t-sm
-                    ${h === 100
-                      ? "bg-primary-container amber-glow"
-                      : "bg-primary"
-                    }`}
-                  style={{ height: `${h}%`, opacity: h === 100 ? 1 : h / 150 }}
-                />
-              ))}
+              {sessions.length > 0 ? (
+                sessions.map(session => {
+                  const height = Math.min(100, Math.max(24, session.duration_minutes * 3))
+                  return (
+                    <div
+                      key={session.id}
+                      className={`w-full rounded-t-sm ${session.completed ? "bg-primary-container amber-glow" : "bg-primary"}`}
+                      style={{ height: `${height}%`, opacity: session.completed ? 1 : 0.75 }}
+                    />
+                  )
+                })
+              ) : (
+                [40, 60, 85, 100, 70, 45, 75].map((h, i) => (
+                  <div
+                    key={i}
+                    className={`w-full rounded-t-sm ${h === 100 ? "bg-primary-container amber-glow" : "bg-primary"}`}
+                    style={{ height: `${h}%`, opacity: h === 100 ? 1 : h / 150 }}
+                  />
+                ))
+              )}
             </div>
             <div className="flex justify-between mt-2 font-label-sm-caps
                             text-[10px] text-on-surface-variant">
-              {["MON","TUE","WED","THU","FRI","SAT","SUN"].map(d => (
-                <span key={d}>{d}</span>
-              ))}
+              {sessions.length > 0 ? (
+                sessions.map(session => (
+                  <span key={session.id}>
+                    {new Date(session.started_at).toLocaleDateString("en-US", { weekday: "short" }).toUpperCase()}
+                  </span>
+                ))
+              ) : (
+                ["MON","TUE","WED","THU","FRI","SAT","SUN"].map(d => (
+                  <span key={d}>{d}</span>
+                ))
+              )}
             </div>
           </div>
         </section>
@@ -391,8 +412,7 @@ export default function Pomodoro() {
             </span>
           </div>
           <p className="text-xs text-on-surface-variant">
-            Your peak focus usually occurs between 10 AM and 12 PM.
-            Consider scheduling high-priority tasks then.
+            {insight || "Loading AI insight based on your recent focus sessions and productivity data..."}
           </p>
         </div>
       </aside>

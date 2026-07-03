@@ -2,12 +2,12 @@ import { NavLink } from "react-router-dom"
 import { motion } from "framer-motion"
 
 const navItems = [
-  { path: "/",         label: "Dashboard", icon: "dashboard" },
-  { path: "/tasks",    label: "Tasks",     icon: "checklist" },
-  { path: "/journal",  label: "Journal",   icon: "edit_note" },
-  { path: "/habits",   label: "Habits",    icon: "auto_awesome" },
-  { path: "/pomodoro", label: "Focus",     icon: "timer" },
-  { path: "/mood",     label: "Mood",      icon: "sentiment_satisfied" },
+  { path: "/app",         label: "Dashboard", icon: "dashboard" },
+  { path: "/app/tasks",    label: "Tasks",     icon: "checklist" },
+  { path: "/app/journal",  label: "Journal",   icon: "edit_note" },
+  { path: "/app/habits",   label: "Habits",    icon: "auto_awesome" },
+  { path: "/app/pomodoro", label: "Focus",     icon: "timer" },
+  { path: "/app/mood",     label: "Mood",      icon: "sentiment_satisfied" },
 ]
 
 export default function Sidebar() {
@@ -33,7 +33,7 @@ export default function Sidebar() {
         <ul className="space-y-1">
           {navItems.map(item => (
             <li key={item.path}>
-              <NavLink to={item.path} end={item.path === "/"}>
+              <NavLink to={item.path} end={item.path === "/app"}>
               {({ isActive }) => (
                 <motion.div
                   whileTap={{ scale: 0.98 }}

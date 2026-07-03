@@ -382,13 +382,23 @@ function CreateTaskForm({ onSubmit, onClose, categories }) {
 
 function RightPanel({ sessions, tasks }) {
   const today = new Date().toDateString()
-  const focusHours = (sessions
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toDateString()
+
+  const focusHoursRaw = sessions
     .filter(s => s.completed &&
       new Date(s.started_at).toDateString() === today)
     .reduce((sum, s) => sum + s.duration_minutes, 0) / 60
-  ).toFixed(1)
 
-  const focusPct = Math.min((parseFloat(focusHours) / 8) * 100, 100)
+  const yesterdayFocusHoursRaw = sessions
+    .filter(s => s.completed &&
+      new Date(s.started_at).toDateString() === yesterday)
+    .reduce((sum, s) => sum + s.duration_minutes, 0) / 60
+
+  const focusHours = focusHoursRaw.toFixed(1)
+  const focusPct = Math.min((focusHoursRaw / 8) * 100, 100)
+  const focusIncrease = yesterdayFocusHoursRaw > 0
+    ? ((focusHoursRaw - yesterdayFocusHoursRaw) / yesterdayFocusHoursRaw) * 100
+    : null
 
   return (
     <aside className="fixed right-0 top-0 h-full w-right_panel_width
@@ -419,7 +429,12 @@ function RightPanel({ sessions, tasks }) {
           />
         </div>
         <p className="text-[11px] text-primary/70 italic mt-2">
-          +12% from yesterday's average
+          {focusIncrease === null
+            ? "No focus baseline available yet"
+            : focusIncrease >= 0
+              ? `+${focusIncrease.toFixed(0)}% from yesterday`
+              : `${focusIncrease.toFixed(0)}% from yesterday`
+          }
         </p>
       </div>
 
@@ -451,30 +466,9 @@ function RightPanel({ sessions, tasks }) {
             ))
           }
           {tasks.filter(t => t.status !== "done" && t.due_date).length === 0 && (
-            <>
-              {[
-                { title: "Q4 Strategy Deck",    due: "Due in 2 days",    active: true  },
-                { title: "Client Presentation", due: "Nov 18, 10:00 AM", active: false },
-                { title: "Security Audit",      due: "Next Monday",      active: false },
-              ].map((item, i) => (
-                <li
-                  key={i}
-                  className={`pl-4 py-2 border-l-2 rounded-r-lg
-                              transition-colors
-                    ${item.active
-                      ? "border-primary bg-primary/5"
-                      : "border-outline-variant hover:border-primary/40"
-                    }`}
-                >
-                  <p className="text-sm font-semibold text-on-surface">
-                    {item.title}
-                  </p>
-                  <p className="text-[11px] text-on-surface-variant/60">
-                    {item.due}
-                  </p>
-                </li>
-              ))}
-            </>
+            <li className="text-xs text-on-surface-variant">
+              No upcoming deadlines yet.
+            </li>
           )}
         </ul>
       </div>

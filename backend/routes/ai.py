@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from database.connection import get_db
 from database.models import (
     Task, HabitCompletion, JournalEntry,
-    MoodCheckin, AIInsight, TaskStatus
+    MoodCheckin, AIInsight, PomodoroSession, TaskStatus
 )
 from ai.claude import ask_claude, get_mood_system_prompt
 
@@ -16,6 +16,7 @@ router = APIRouter(prefix="/ai", tags=["AI"])
 class MoodBriefingRequest(BaseModel):
     mood: Optional[str] = "neutral"
     energy_level: Optional[int] = 5
+    time_of_day: Optional[str] = "morning"
 
 class InsightResponse(BaseModel):
     content: str
@@ -58,6 +59,20 @@ def get_user_context(db: Session) -> dict:
         JournalEntry.created_at >= week_ago
     ).count()
 
+    focus_sessions_week = db.query(PomodoroSession).filter(
+        PomodoroSession.completed == True,
+        PomodoroSession.started_at >= week_ago
+    ).all()
+
+    focus_minutes_week = 0
+    for session in focus_sessions_week:
+        focus_minutes_week += int(session.duration_minutes)  # type: ignore[arg-type]
+
+    avg_focus_session = (
+        focus_minutes_week / len(focus_sessions_week)
+        if focus_sessions_week else 0.0
+    )
+
     return {
         "pending_tasks": len(pending),
         "pending_task_titles": [t.title for t in pending[:5]],
@@ -65,6 +80,9 @@ def get_user_context(db: Session) -> dict:
         "habit_completions_this_week": habit_completions,
         "recent_mood": recent_mood.mood.value if recent_mood else "unknown",
         "journal_entries_this_week": recent_entries,
+        "focus_sessions_this_week": len(focus_sessions_week),
+        "focus_minutes_this_week": focus_minutes_week,
+        "average_focus_session_minutes": float(f"{avg_focus_session:.1f}"),
     }
 
 @router.post("/morning-briefing", response_model=InsightResponse)
@@ -74,9 +92,17 @@ def morning_briefing(
 ):
     ctx = get_user_context(db)
     mood = request.mood or "neutral"
+    time_of_day = (request.time_of_day or "morning").lower()
+    greeting = {
+        "morning": "Good morning",
+        "afternoon": "Good afternoon",
+        "evening": "Good evening"
+    }.get(time_of_day, "Good day")
 
     prompt = f"""
-Generate a warm, personalized morning briefing for a productivity app user.
+Generate a warm, personalized briefing for a productivity app user.
+
+Start the message with the appropriate greeting based on the current time of day: "{greeting}".
 
 Their current state:
 - Mood: {mood}
@@ -87,7 +113,7 @@ Their current state:
 - Habit completions this week: {ctx['habit_completions_this_week']}
 - Journal entries this week: {ctx['journal_entries_this_week']}
 
-Write a 3-4 sentence morning briefing that:
+Write a 3-4 sentence briefing that:
 1. Acknowledges their mood warmly
 2. Highlights their most important task for today
 3. Mentions their recent progress encouragingly
@@ -96,7 +122,10 @@ Write a 3-4 sentence morning briefing that:
 Keep it personal, warm, and under 100 words. No bullet points - flowing prose only.
 """
     
-    content = ask_claude(prompt, system=get_mood_system_prompt(mood), max_tokens=200)
+    try:
+        content = ask_claude(prompt, system=get_mood_system_prompt(mood), max_tokens=200)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
 
     db.add(AIInsight(
         insight_type="morning_briefing",
@@ -133,14 +162,27 @@ def detect_pattern(db: Session = Depends(get_db)):
         mood = checkin.mood.value
         mood_summary[mood] = mood_summary.get(mood, 0) + 1
 
+    session_day_counts = {}
+    week_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    focus_sessions = db.query(PomodoroSession).filter(
+        PomodoroSession.completed == True,
+        PomodoroSession.started_at >= week_ago
+    ).all()
+    for session in focus_sessions:
+        day = session.started_at.strftime("%A")
+        session_day_counts[day] = session_day_counts.get(day, 0) + 1
+
     prompt = f"""
 Analyze this user's productivity data and generate ONE specific, actionable insight.
 
-Task completion by the day of week: {day_counts or 'not enough data yet'}
+Task completion by day of week: {day_counts or 'not enough data yet'}
+Focus sessions by day last week: {session_day_counts or 'not enough data yet'}
 Mood distribution (last 14 days): {mood_summary or 'not enough data yet'}
 Total pending tasks: {ctx['pending_tasks']}
 Tasks completed this week: {ctx['completed_this_week']}
-Habit completions this week: {ctx['habit_completions_this_week']}
+Focus sessions this week: {ctx['focus_sessions_this_week']}
+Total focused minutes this week: {ctx['focus_minutes_this_week']}
+Average completed session duration: {ctx['average_focus_session_minutes']} minutes
 
 Generate a single insight sentence that:
 - is specific and data driven (mention the actual days/numbers if available)

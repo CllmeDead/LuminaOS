@@ -1,16 +1,26 @@
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
-const CACHE_KEY      = "lumina_briefing"
-const CACHE_DURATION = 12 * 60 * 60 * 1000
+const CACHE_KEY        = "lumina_briefing"
+const CACHE_DURATION   = 3 * 60 * 60 * 1000
+const REFRESH_INTERVAL = 3 * 60 * 60 * 1000
+
+function getTimeOfDay() {
+  const hour = new Date().getHours()
+  if (hour < 12) return "morning"
+  if (hour < 17) return "afternoon"
+  return "evening"
+}
 
 export default function MorningBriefing({ mood = "neutral", energy = 5, onBriefingLoad }) {
   const [briefing, setBriefing] = useState(null)
   const [loading, setLoading]   = useState(false)
   const [visible, setVisible]   = useState(false)
+  const [error, setError]       = useState(null)
 
-  const fetchBriefing = async () => {
+  const fetchBriefing = useCallback(async () => {
     setVisible(true)
+    setError(null)
 
     try {
       const cached = localStorage.getItem(CACHE_KEY)
@@ -32,25 +42,42 @@ export default function MorningBriefing({ mood = "neutral", energy = 5, onBriefi
       const res = await fetch("/api/ai/morning-briefing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mood, energy_level: energy })
+        body: JSON.stringify({
+          mood,
+          energy_level: energy,
+          time_of_day: getTimeOfDay()
+        })
       })
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`)
+      }
+
       const data = await res.json()
-      setBriefing(data.content)
-      onBriefingLoad?.(data.content)
+      const content = data?.content || "Unable to generate a briefing right now."
+      setBriefing(content)
+      onBriefingLoad?.(content)
       localStorage.setItem(CACHE_KEY, JSON.stringify({
-        text:      data.content,
+        text:      content,
         timestamp: Date.now()
       }))
     } catch (err) {
       console.error("Briefing error:", err)
+      setError("Unable to generate a briefing right now. Please try again later.")
     } finally {
       setLoading(false)
     }
-  }
+  }, [mood, energy, onBriefingLoad])
+
+  useEffect(() => {
+    fetchBriefing()
+    const interval = setInterval(fetchBriefing, REFRESH_INTERVAL)
+    return () => clearInterval(interval)
+  }, [fetchBriefing])
 
   return (
     <div className="mb-stack_lg">
-      {!visible && (
+      {(!visible || error) && (
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -66,7 +93,7 @@ export default function MorningBriefing({ mood = "neutral", energy = 5, onBriefi
           >
             auto_awesome
           </span>
-          View today's briefing
+          {error ? "Retry today's briefing" : "View today's briefing"}
         </motion.button>
       )}
 
@@ -99,6 +126,18 @@ export default function MorningBriefing({ mood = "neutral", energy = 5, onBriefi
                                   rounded animate-pulse w-3/4" />
                   <div className="h-3 bg-surface-container-high
                                   rounded animate-pulse w-1/2" />
+                </div>
+              ) : error ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-title-md text-red-300 italic">
+                    {error}
+                  </p>
+                  <button
+                    onClick={fetchBriefing}
+                    className="rounded-full bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition"
+                  >
+                    Try again
+                  </button>
                 </div>
               ) : (
                 <p className="text-sm font-title-md

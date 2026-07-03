@@ -7,10 +7,21 @@ async function request(method, path, body = null) {
     }
     if (body) options.body = JSON.stringify(body)
 
-    const res = await fetch(`${BASE_URL}${path}`, options)
-    if (!res.ok) throw new Error(`API error: ${res.status}`)
-    if (res.status === 204) return null
-    return res.json()
+    try {
+        const res = await fetch(`${BASE_URL}${path}`, options)
+        if (!res.ok) throw new Error(`API error: ${res.status}`)
+        if (res.status === 204) return null
+
+        const text = await res.text()
+        if (!text) return null
+        return JSON.parse(text)
+    } catch (error) {
+        if (error instanceof SyntaxError) {
+            console.warn(`API returned invalid JSON for ${path}:`, error.message)
+            return null
+        }
+        throw error
+    }
 }
 
 export const api = {
@@ -34,6 +45,7 @@ export const api = {
     startSession: (data) => request("POST", "/pomodoro/", data),
     updateSession: (id, data) => request("PUT", `/pomodoro/${id}`, data),
 
+    getAIInsight: () => request("GET", "/ai/patterns"),
     getMoodCheckins: () => request("GET", "/mood/"),
     createMoodCheckin: (data) => request("POST", "/mood/", data),
 }
