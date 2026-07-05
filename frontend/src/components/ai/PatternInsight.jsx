@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react"
 import { TrendingUp } from "lucide-react"
 
+const BASE_URL = import.meta.env.VITE_API_URL || "/api"
+
 export default function PatternInsight() {
     const [insight, SetInsight] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetch("/api/ai/patterns")
+        fetch(`${BASE_URL}/ai/patterns`)
             .then(res => res.json())
             .then(data => setInsight(data.content))
             .catch(err => console.error("Pattern error:", err))

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 
+const BASE_URL = import.meta.env.VITE_API_URL || "/api"
 const CACHE_KEY        = "lumina_briefing"
 const CACHE_DURATION   = 3 * 60 * 60 * 1000
 const REFRESH_INTERVAL = 3 * 60 * 60 * 1000
@@ -39,7 +40,7 @@ export default function MorningBriefing({ mood = "neutral", energy = 5, onBriefi
 
     setLoading(true)
     try {
-      const res = await fetch("/api/ai/morning-briefing", {
+      const res = await fetch(`${BASE_URL}/ai/morning-briefing`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

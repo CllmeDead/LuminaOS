@@ -2,6 +2,8 @@ import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { BarChart2, X } from "lucide-react"
 
+const BASE_URL = import.meta.env.VITE_API_URL || "/api"
+
 function isShowReportDay() {
     return new Date().getDay() === 0
 }
@@ -19,7 +21,7 @@ export default function Weeklyreport() {
         setLoading(true)
         setVisible(true)
 
-        fetch("/api/ai/weekly-report")
+        fetch(`${BASE_URL}/ai/weekly-report`)
             .then(res => res.json())
             .then(data => setReport(data.content))
             .catch(err => console.error("Weekly report error:", err))
@@ -29,8 +31,7 @@ export default function Weeklyreport() {
     const fetchReport = () => {
         setVisible(true)
         setLoading(true)
-        fetch("/api/ai/weekly-report")
-            .then(res => res.json())
+        fetch(`${BASE_URL}/ai/weekly-report`)
             .then(data => setReport(data.content))
             .catch(err => console.error("Weekly report error:", err))
             .finally(() => setLoading(false))

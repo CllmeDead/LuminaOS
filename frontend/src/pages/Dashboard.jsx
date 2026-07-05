@@ -361,7 +361,8 @@ function AIInsightBar() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch("/api/ai/patterns")
+    const BASE_URL = import.meta.env.VITE_API_URL || "/api"
+    fetch(`${BASE_URL}/ai/patterns`)
       .then(res => res.json())
       .then(data => setInsight(data.content))
       .catch(err => {

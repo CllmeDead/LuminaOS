@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { Music } from "lucide-react"
 
+const BASE_URL = import.meta.env.VITE_API_URL || "/api"
+
 export default function MusicSuggestion({ taskTitle, taskCategory}) {
     const [suggestion, setSuggestio ] = useState(null)
     const [loading, setLoading ] = useState(false)
@@ -9,7 +11,7 @@ export default function MusicSuggestion({ taskTitle, taskCategory}) {
         if (!taskTitle) return
         setLoading(true)
 
-        fetch("/api/ai/music-suggestion", {
+        fetch(`${BASE_URL}/ai/music-suggestion`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

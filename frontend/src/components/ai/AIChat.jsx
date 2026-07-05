@@ -2,6 +2,8 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Send, Bot, X } from "lucide-react"
 
+const BASE_URL = import.meta.env.VITE_API_URL || "/api"
+
 export default function AIChat({ mood = "neutral "}) {
     const [open, setOpen] = useState(false)
     const [input, setInput] = useState("")
@@ -18,7 +20,7 @@ export default function AIChat({ mood = "neutral "}) {
 
   try {
     const res = await fetch(
-      `/api/ai/chat?message=${encodeURIComponent(userMsg)}&mood=${mood}`
+      `${BASE_URL}/ai/chat?message=${encodeURIComponent(userMsg)}&mood=${mood}`
     )
     if (!res.ok) throw new Error(`HTTP error: ${res.status}`)
     const data = await res.json()
