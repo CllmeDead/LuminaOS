@@ -1,13 +1,21 @@
 from groq import Groq
 from config import settings
-print("GROQ KEY LOADED:", bool(settings.groq_api_key))
-client = Groq(api_key=settings.groq_api_key)
+
+client = None
+if settings.groq_api_key:
+    client = Groq(api_key=settings.groq_api_key)
 
 def ask_claude(
         prompt: str,
         system: str = "You are Lumina, a warm and insightful personal productivity AI.",
         max_tokens: int = 500
 ) -> str:
+    if not client:
+        raise RuntimeError(
+            "GROQ_API_KEY is not configured. "
+            "Set GROQ_API_KEY in your Render environment variables."
+        )
+
     message = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         max_tokens=max_tokens,
