@@ -17,27 +17,4 @@ A beautiful, full-stack productivity app with AI features built with FastAPI, Re
 - **Desktop:** Electron
 - **AI:** Groq (Llama 3.3 70B)
 
-## Setup
-
-### Backend
-```bash
-cd backend
-python -m venv venv
-venv\Scripts\activate  # Windows
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-```
-
-### Frontend
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Environment Variables
-Create a `.env` file in the `backend/` folder:
-```
-DATABASE_URL=sqlite:///./lumina.db
-GROQ_API_KEY=your-key-here
-```
+https://lumina-os-brown.vercel.app
