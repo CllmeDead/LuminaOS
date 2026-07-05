@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { api } from "../api"
@@ -7,6 +7,40 @@ import MorningBriefing from "../components/ai/MorningBriefing"
 import WeeklyReport from "../components/ai/WeeklyReport"
 
 function TopBar() {
+  const [user, setUser] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef(null)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    const stored = localStorage.getItem("lumina_user")
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored))
+      } catch {
+        setUser(null)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  function handleLogout() {
+    localStorage.removeItem("lumina_token")
+    localStorage.removeItem("lumina_user")
+    navigate("/")
+  }
+
+  const userInitial = user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"
+
   return (
     <header className="h-16 flex items-center justify-between
                        px-gutter border-b border-outline-variant
@@ -37,10 +71,27 @@ function TopBar() {
                            transition-colors">
           <span className="material-symbols-outlined">notifications</span>
         </button>
-        <div className="w-8 h-8 rounded-full bg-primary-container/20
+
+        <div ref={menuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(o => !o)}
+            className="w-8 h-8 rounded-full bg-primary-container/20
                         border border-outline-variant flex items-center
-                        justify-center">
-          <span className="text-primary-container text-xs font-bold">G</span>
+                        justify-center"
+          >
+            <span className="text-primary-container text-xs font-bold">{userInitial}</span>
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-outline-variant bg-surface p-3 shadow-2xl">
+              <p className="text-sm font-semibold text-on-surface">{user?.name || "Guest User"}</p>
+              <p className="text-xs text-on-surface-variant truncate mb-3">{user?.email || "No email"}</p>
+              <div className="flex gap-2">
+                <button onClick={handleLogout} className="flex-1 rounded-full bg-primary px-3 py-2 text-sm font-semibold text-on-primary-fixed">Log out</button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>
@@ -175,7 +226,7 @@ function DailyIntentions({ tasks, habits, loading }) {
           Daily Intentions
         </h4>
         <button
-          onClick={() => navigate("/tasks")}
+          onClick={() => navigate("/app/tasks")}
           className="text-primary text-sm font-bold flex items-center
                      gap-1 hover:underline"
         >

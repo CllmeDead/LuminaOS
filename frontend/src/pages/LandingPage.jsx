@@ -1,6 +1,8 @@
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
+import { useState } from "react"
 import { ArrowRight, Sparkles, CheckCircle2, BrainCircuit, CalendarClock, NotebookPen, TimerReset } from "lucide-react"
+import { api } from "../api"
 
 const features = [
   {
@@ -28,7 +30,30 @@ const highlights = [
 
 export default function LandingPage() {
   const navigate = useNavigate()
-  
+  const [mode, setMode] = useState("login")
+  const [form, setForm] = useState({ email: "", password: "", name: "" })
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setError("")
+    setLoading(true)
+
+    try {
+      const response = mode === "login"
+        ? await api.loginUser({ email: form.email, password: form.password })
+        : await api.registerUser({ email: form.email, password: form.password, name: form.name })
+
+      localStorage.setItem("lumina_token", response.token)
+      localStorage.setItem("lumina_user", JSON.stringify(response.user))
+      navigate("/app")
+    } catch (err) {
+      setError(err.message || "Authentication failed")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#060606] text-[#f7f1ea]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -84,6 +109,57 @@ export default function LandingPage() {
                 Explore features
               </a>
             </div>
+            <form onSubmit={handleSubmit} className="mt-8 rounded-[24px] border border-white/10 bg-[#0f0f0f] p-5 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
+              <div className="mb-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium ${mode === "login" ? "bg-[#f5a623] text-[#120b04]" : "text-[#d7d0ca]"}`}
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode("register")}
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium ${mode === "register" ? "bg-[#f5a623] text-[#120b04]" : "text-[#d7d0ca]"}`}
+                >
+                  Create account
+                </button>
+              </div>
+              {mode === "register" && (
+                <input
+                  value={form.name}
+                  onChange={(event) => setForm({ ...form, name: event.target.value })}
+                  className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
+                  placeholder="Your name"
+                />
+              )}
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
+                placeholder="Email"
+                required
+              />
+              <input
+                type="password"
+                value={form.password}
+                onChange={(event) => setForm({ ...form, password: event.target.value })}
+                className="mb-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none"
+                placeholder="Password"
+                required
+              />
+              {error ? <p className="mb-3 text-sm text-red-400">{error}</p> : null}
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#f5a623] px-6 py-3 font-semibold text-[#120b04] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loading ? "Please wait..." : mode === "login" ? "Log in" : "Create account"}
+                <ArrowRight size={18} />
+              </button>
+            </form>
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-[#8f8a84]">
               {highlights.map((item) => (
                 <div key={item} className="flex items-center gap-2">

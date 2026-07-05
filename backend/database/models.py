@@ -4,6 +4,8 @@ from sqlalchemy import (
     DateTime, ForeignKey, Table, Float, Enum
 )
 
+import hashlib
+
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -31,6 +33,23 @@ class MOODLEVEL(enum.Enum):
 class HabitFrequency(enum.Enum):
     DAILY = "daily"
     WEEKLY = "weekly"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    name = Column(String(255), nullable=True)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def verify_password(self, password: str) -> bool:
+        return self.password_hash == hashlib.sha256(password.encode("utf-8")).hexdigest() #type: ignore
+
+    @staticmethod
+    def hash_password(password: str) -> str:
+        return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 class Task(Base):

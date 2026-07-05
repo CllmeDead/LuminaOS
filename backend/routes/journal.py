@@ -63,6 +63,7 @@ def update_entry(entry_id: int, payload: JournalUpdate, db: Session = Depends(ge
 @router.delete("/{entry_id}", status_code=204)
 def delete_entry(entry_id: int, db: Session = Depends(get_db)):
     entry = db.query(JournalEntry).filter(
+        JournalEntry.id == entry_id,
         JournalEntry.is_deleted == False
     ).first()
     if not entry:

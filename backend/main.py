@@ -1,10 +1,12 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.connection import engine, Base, SessionLocal
 from database import models
 from database.models import seed_default_categories
 
-from routes import tasks, categories, journal, habits, pomodoro, mood, ai
+from routes import tasks, categories, journal, habits, pomodoro, mood, ai, auth
 
 Base.metadata.create_all(bind=engine)
 
@@ -20,14 +22,20 @@ app = FastAPI(
     version="0.2.0"
 )
 
+allowed_origins = ["http://localhost:5173"]
+configured_origins = os.getenv("ALLOWED_ORIGINS", "")
+if configured_origins:
+    allowed_origins.extend([origin.strip() for origin in configured_origins.split(",") if origin.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(categories.router)
 app.include_router(tasks.router)
 app.include_router(journal.router)

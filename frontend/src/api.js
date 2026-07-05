@@ -1,11 +1,16 @@
-const BASE_URL = "/api"
+const BASE_URL = import.meta.env.VITE_API_URL || "/api"
 
-async function request(method, path, body = null) {
+function getAuthHeaders() {
+    const token = localStorage.getItem("lumina_token")
+    return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function request(method, path, body = null, includeAuth = true) {
     const options = {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...(includeAuth ? getAuthHeaders() : {}) },
     }
-    if (body) options.body = JSON.stringify(body)
+    if (body !== null) options.body = JSON.stringify(body)
 
     try {
         const res = await fetch(`${BASE_URL}${path}`, options)
@@ -25,6 +30,9 @@ async function request(method, path, body = null) {
 }
 
 export const api = {
+    registerUser: (data) => request("POST", "/auth/register", data, false),
+    loginUser: (data) => request("POST", "/auth/login", data, false),
+
     getTasks: (params = {}) => request("GET", `/tasks/?${new URLSearchParams(params)}`),
     createTask: (data) => request("POST", "/tasks/", data),
     updateTask: (id, data) => request("PUT", `/tasks/${id}`, data),
